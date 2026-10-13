@@ -1,0 +1,134 @@
+"""Generate a SYNTHETIC example dataset in the same file formats used in the lab.
+
+None of these numbers are real measurements. The decay rates, spectra and lamp
+emission profiles are invented, with plausible orders of magnitude, so that the
+analysis pipeline can be run and demonstrated end to end.
+
+Usage:
+    python scripts/make_example_data.py            # writes data/example/
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+RNG = np.random.default_rng(2024)
+
+SAMPLES = [
+    # sample_id, dish, replicate, relative absorbance, relative 1O2 efficiency
+    ("BS1", "Brussels sprouts", 1, 1.0, 1.0),
+    ("BS2", "Brussels sprouts", 2, 0.9, 1.2),
+    ("BS3", "Brussels sprouts", 3, 1.7, 1.1),
+    ("PC1", "Pancake", 1, 1.1, 1.1),
+    ("PC2", "Pancake", 2, 0.7, 1.3),
+    ("PC3", "Pancake", 3, 1.0, 1.8),
+    ("SF1", "Stir-fry", 1, 1.0, 1.9),
+    ("SF2", "Stir-fry", 2, 3.2, 0.8),
+    ("SF3", "Stir-fry", 3, 2.6, 1.0),
+]
+
+# Light sources: base pseudo-first-order rate for a "typical" sample (s^-1),
+# sampling times (s), and whether late points curve off (weak light).
+LIGHTS = {
+    "UVA": dict(k=1.2e-5, times=[0, 120, 300, 600, 1200, 2400, 4800], curve=0.0),
+    "Fluorescent": dict(k=2.5e-6, times=[0, 600, 1800, 3600, 7200, 14400, 21600], curve=0.8),
+    "Sunlight": dict(k=2.0e-5, times=[0, 120, 300, 600, 900], curve=0.0),
+}
+WAVELENGTHS = np.arange(200, 801)
+
+
+def ffa_table(times_s, k, curve=0.0, noise=0.004, area0=None):
+    """FFA peak areas following first-order decay, optionally slowing at late times."""
+    t = np.asarray(times_s, dtype=float)
+    area0 = area0 or RNG.uniform(140, 250)
+    # 'curve' makes the effective rate drop at late times (1O2 no longer at steady state)
+    t_eff = t / (1 + curve * t / t.max()) if curve else t
+    area = area0 * np.exp(-k * t_eff) * (1 + RNG.normal(0, noise, t.size))
+    area[0] = area0
+    area = np.round(area, 1)
+    return pd.DataFrame({
+        "time_h": np.round(t / 3600, 4),
+        "time_s": t.astype(int),
+        "area": area,
+        "ln(FFAt/FFA0)": np.log(area / area[0]),
+    })
+
+
+def brc_absorbance(scale):
+    """Brown-carbon-like spectrum: exponential decay with wavelength plus a small 280 nm band."""
+    wl = WAVELENGTHS
+    a = 0.9 * np.exp(-0.016 * (wl - 200)) + 0.06 * np.exp(-((wl - 280) / 18) ** 2)
+    a = scale * a + RNG.normal(0, 2e-4, wl.size)
+    return np.round(a, 6)
+
+
+def pn_absorbance():
+    """Reference-sensitizer-like spectrum with a broad band near 370 nm (invented shape)."""
+    wl = WAVELENGTHS
+    a = 0.35 * np.exp(-((wl - 370) / 30) ** 2) + 0.5 * np.exp(-((wl - 240) / 20) ** 2)
+    return np.round(a + RNG.normal(0, 2e-4, wl.size), 6)
+
+
+def lamp_spectra():
+    """Invented emission profiles in W m^-2 nm^-1 (shapes only, not measured)."""
+    wl = WAVELENGTHS.astype(float)
+    uva = 2.6 * np.exp(-((wl - 352) / 14) ** 2)
+    fl = 7 * (0.05 * np.exp(-((wl - 405) / 2) ** 2) + 0.08 * np.exp(-((wl - 436) / 2) ** 2)
+          + 0.02 * np.exp(-((wl - 365) / 2) ** 2) + 0.12 * np.exp(-((wl - 545) / 3) ** 2)
+          + 0.03 * np.clip((wl - 380) / 200, 0, 1))
+    sun = np.where(wl > 300, 0.25 * (1 - np.exp(-(wl - 300) / 25)), 0) * np.exp(-((wl - 520) / 400) ** 2)
+    return pd.DataFrame({"wavelength_nm": WAVELENGTHS, "UVA": np.round(uva, 5),
+                         "Fluorescent": np.round(fl, 5), "Sunlight": np.round(sun, 5)})
+
+
+def main(out: Path):
+    decay_dir = out / "ffa_decay"
+    decay_dir.mkdir(parents=True, exist_ok=True)
+
+    manifest = []
+    for sid, dish, rep, abs_scale, eff in SAMPLES:
+        manifest.append({"sample_id": sid, "dish": dish, "replicate": rep})
+        for light, cfg in LIGHTS.items():
+            k = cfg["k"] * eff * abs_scale ** 0.5 * RNG.uniform(0.85, 1.15)
+            ffa_table(cfg["times"], k, cfg["curve"]).to_csv(
+                decay_dir / f"{sid}_{light}.csv", index=False)
+            # matching background-air control: essentially no decay
+            ffa_table(cfg["times"], cfg["k"] * 0.02, noise=0.003).to_csv(
+                decay_dir / f"{sid}_{light}_background.csv", index=False)
+    pd.DataFrame(manifest).to_csv(out / "samples.csv", index=False)
+
+    # reference sensitizer: fast decay, short irradiation
+    for light, k_ref in {"UVA": 3.3e-3, "Fluorescent": 5.0e-4, "Sunlight": 4.5e-3}.items():
+        ffa_table([0, 30, 60, 120, 240, 360, 480], k_ref, noise=0.003).to_csv(
+            decay_dir / f"REF_{light}.csv", index=False)
+
+    spectra = {"wavelength_nm": WAVELENGTHS, "REF": pn_absorbance()}
+    for sid, _, _, abs_scale, _ in SAMPLES:
+        spectra[sid] = brc_absorbance(abs_scale * 0.25)
+    pd.DataFrame(spectra).to_csv(out / "absorbance.csv", index=False)
+    lamp_spectra().to_csv(out / "irradiance.csv", index=False)
+
+    (out / "README.md").write_text(
+        "# Example data (synthetic)\n\n"
+        "Every file in this folder was generated by `scripts/make_example_data.py`.\n"
+        "The values are invented for demonstration and are **not** experimental data.\n\n"
+        "| File | Contents |\n|---|---|\n"
+        "| `samples.csv` | sample IDs, dish type, replicate number |\n"
+        "| `ffa_decay/<sample>_<light>.csv` | FFA peak area vs time: `time_h, time_s, area, ln(FFAt/FFA0)` |\n"
+        "| `ffa_decay/<sample>_<light>_background.csv` | matching background-air control |\n"
+        "| `ffa_decay/REF_<light>.csv` | reference sensitizer run for each light |\n"
+        "| `absorbance.csv` | UV/Vis absorbance (1 cm) for each sample and the reference |\n"
+        "| `irradiance.csv` | spectral irradiance of each light source, W m⁻² nm⁻¹ |\n"
+    )
+    print(f"Synthetic example data written to {out}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--out", type=Path, default=ROOT / "data" / "example")
+    main(parser.parse_args().out)

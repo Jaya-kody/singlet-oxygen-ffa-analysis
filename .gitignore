@@ -1,0 +1,18 @@
+# Never commit real lab data: keep it in data/raw/ (ignored)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/README.txt
+*.xlsx
+*.7z
+*.pptx
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
