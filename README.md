@@ -27,7 +27,7 @@ Borduas-Dedekind, N.; Gemmell, K. J.; **Jayakody, M. M.**; et al.
 *Singlet oxygen is produced from brown carbon-containing cooking organic aerosols (BrCOA) under indoor lighting.*
 **Environ. Sci.: Atmos.** 2024, 4, 611–619. [doi:10.1039/D3EA00167A](https://doi.org/10.1039/D3EA00167A) (open access)
 
-**My contribution:** I co-ran the cooking experiments, collected the UV/Vis and singlet
+**My contribution:** I ran all the experiments, collected the UV/Vis and singlet
 oxygen data, and wrote Python scripts to fit the FFA kinetics and plot the results.
 This repository is a cleaned-up, tested version of that code. It is not the exact
 pipeline behind the published numbers, so it will not reproduce them to the last digit.
