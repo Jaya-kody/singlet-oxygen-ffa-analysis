@@ -94,10 +94,24 @@ results/                 output tables (summary.csv, conversion_factors.csv)
 figures/                 output figures
 ```
 
+## How to cite
+
+If you use this code, or adapt it, in a publication, thesis, report or presentation,
+please credit it by citing:
+
+> Jayakody, M. M. (2026). *singlet-oxygen-ffa-analysis: Python tools to quantify singlet
+> oxygen with the furfuryl alcohol probe* (Version 1.0.0) [Computer software].
+> https://github.com/Jaya-kody/singlet-oxygen-ffa-analysis
+
+and the article the method comes from (see [Publication](#publication) above).
+GitHub's **"Cite this repository"** button (right-hand sidebar) gives this citation
+in APA and BibTeX formats, generated from `CITATION.cff`.
+
 ## Requirements
 
 Python 3.9+ with numpy, pandas and matplotlib (see `requirements.txt`).
 
 ## License
 
-Code: MIT (see `LICENSE`).
+Code: MIT (see `LICENSE`). Anyone who copies or redistributes the code must keep the
+copyright notice naming the author; please also cite it in publications as described above.

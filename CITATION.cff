@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite both the software and the article below."
+title: "singlet-oxygen-ffa-analysis: Python tools to quantify singlet oxygen with the furfuryl alcohol probe"
+type: software
+authors:
+  - family-names: Jayakody
+    given-names: Madushika Madri
+repository-code: "https://github.com/Jaya-kody/singlet-oxygen-ffa-analysis"
+license: MIT
+version: 1.0.0
+date-released: 2026-10-13
+keywords:
+  - singlet oxygen
+  - furfuryl alcohol
+  - photochemistry
+  - brown carbon
+  - quantum yield
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Borduas-Dedekind
+      given-names: Nadine
+    - family-names: Gemmell
+      given-names: Keighan J.
+    - family-names: Jayakody
+      given-names: Madushika Madri
+    - family-names: Lee
+      given-names: Rickey J. M.
+    - family-names: Sardena
+      given-names: Claudia
+    - family-names: Zala
+      given-names: Sebastian
+  title: "Singlet oxygen is produced from brown carbon-containing cooking organic aerosols (BrCOA) under indoor lighting"
+  journal: "Environmental Science: Atmospheres"
+  year: 2024
+  volume: 4
+  start: 611
+  end: 619
+  doi: "10.1039/D3EA00167A"
